@@ -5,8 +5,6 @@ from sklearn.model_selection import train_test_split
 
 class DataScienceAssistant:
 	def __init__(self):
-        
-
 
 	def discretize_numerical_variable(feature, thresholds, discrete_levels):
 		'''
@@ -21,16 +19,16 @@ class DataScienceAssistant:
     	'''
 		threshold_cnt = len(thresholds)
 		level_cnt = len(discrete_levels)
-		
+
 		feature.loc[feature < threshold_cnt[0]] = discrete_levels[0]
-		
+
 		for i in range(1, threshold_cnt):
-			feature.loc[(feature >= threshold_cnt[i-1]) & (feature < threshold_cnt[i])] = discrete_levels[i]
+			feature.loc[(feature >= threshold_cnt[i - 1]) &
+			             (feature < threshold_cnt[i])] = discrete_levels[i]
 
 		feature.loc[feature >= threshold_cnt[-1]] = discrete_levels[-1]
 
 		return feature
-
 
 	def bucket_catagorical_variable(feature, newvar_vargroup_map):
 		'''
