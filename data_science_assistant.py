@@ -47,7 +47,6 @@ class DataScienceAssistant:
 		return feature
 
 
-
     def dummy_encode_catagorical_variable(data, variable, remove=False):
     	'''
     	dummy encode the given catagorical variable within data frame
@@ -119,7 +118,6 @@ class DataScienceAssistant:
 		validation_set, test_set = train_test_split(test, test_size = 0.5)
 
 		return train_set, validation_set, test_set
-
 
 
 	def check_null(data, printout=True):
