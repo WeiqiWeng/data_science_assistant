@@ -49,6 +49,7 @@ class DataScienceAssistant:
 
         return feature
 
+
     def bucket_catagorical_variable(self, feature, newvar_vargroup_map):
         """
         divide the value in given catagorical variable into several buckets
