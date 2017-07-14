@@ -35,9 +35,10 @@ class DataScienceAssistant:
             raise ValueError("length of thresholds ({threshold_cnt}) should be length of discrete levels ({level_cnt}) minus one.".format(
                 threshold_cnt=threshold_cnt, level_cnt=level_cnt))
 
-        if type(thresholds[0]) not in {int, float} or type(discrete_levels[0]) not in {int, float}:
-            raise TypeError("Type of threshold ({threshold_type}) or type of discrete level ({level_type}) not numerical.".format(
-                threshold_type=type(thresholds[0]), level_type=type(discrete_levels[0])))
+        type_thresholds = map(lambda x: type(x) not in {int, float}, thresholds)
+        type_levels = map(lambda x: type(x) not in {int, float}, discrete_levels)
+        if any(type_thresholds) or any(type_levels):
+            raise TypeError("Type of threshold or type of discrete level not numerical.")
 
         feature.loc[feature < thresholds[0]] = discrete_levels[0]
 
@@ -50,7 +51,7 @@ class DataScienceAssistant:
         return feature
 
 
-    def bucket_catagorical_variable(self, feature, newvar_vargroup_map):
+    def bucket_catagorical_variable(self, ori_feature, newvar_vargroup_map):
         """
         divide the value in given catagorical variable into several buckets
         Args:
@@ -61,10 +62,13 @@ class DataScienceAssistant:
         Returns:
             pandas data series: the catagorical variable after bucket
         """
-        for new_var, old_var_group in newvar_vargroup_map:
-            feature.loc[feature.isin(old_var_group)] = new_var
+        feature = ori_feature.copy()
+
+        for new_var in newvar_vargroup_map:
+            feature.loc[feature.isin(newvar_vargroup_map[new_var])] = new_var
 
         return feature
+
 
     def dummy_encode_catagorical_variable(self, data, variable, remove=False):
         """
@@ -82,14 +86,15 @@ class DataScienceAssistant:
 
         for level in value_list:
             str_level = '_'.join(str(level).split())
-            dummy_code_name = str(variable) + '_' + str_level
+            dummy_code_name = variable + '_' + str_level
             data[dummy_code_name] = tmp_zeros
-            data.loc[data.variable == level, dummy_code_name] = 1
+            data.loc[data[variable] == level, dummy_code_name] = 1
 
         if remove:
             data.drop(variable, inplace=True, axis=1)
 
         return data
+
 
     def epsilon_natural_log(self, feature, epsilon):
         """
@@ -118,7 +123,7 @@ class DataScienceAssistant:
 
         return feature, mean, std
 
-    def split_data_set(self, init_data, train_set_proportion=0.6):
+    def split_data_set(self, init_data, y, train_set_proportion=0.6):
         """
         split given data set into training, validation and testing set
         Args:
@@ -130,11 +135,11 @@ class DataScienceAssistant:
             pandas data frame: testing set
 
         """
-        train_set, test = train_test_split(
-            init_data, test_size=1 - train_set_proportion)
-        validation_set, test_set = train_test_split(test, test_size=0.5)
+        train_set, test_set, train_set_y, test_set_y = train_test_split(
+            init_data, y, test_size=1 - train_set_proportion)
+        validation_set, test_set, validation_set_y, test_set_y = train_test_split(test_set, test_set_y, test_size=0.5)
 
-        return train_set, validation_set, test_set
+        return train_set, train_set_y, validation_set, validation_set_y, test_set, test_set_y
 
     def check_null(self, data, printout=True):
         """
