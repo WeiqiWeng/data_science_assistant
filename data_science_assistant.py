@@ -1,5 +1,5 @@
 # author: Weiqi Weng
-##
+# contact: allen.weng9210@gmail.com
 
 import pandas as pd
 import numpy as np
@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 class DataScienceAssistant:
     def __init__(self):
         pass
+
 
     def discretize_numerical_variable(self, ori_feature, thresholds, discrete_levels):
         """
@@ -96,7 +97,29 @@ class DataScienceAssistant:
         return data
 
 
-    def epsilon_natural_log(self, feature, epsilon):
+    def batch_dummy_encode_catagorical_variable(self, data, variables, remove=[]):
+        """
+        dummy encode the given list of catagorical variables within data frame in a batch manner
+        Args:
+            data (pandas data frame): the data frame user works on
+            variables ([str*]): names of catagorical variables user wants to dummy encode
+            remove ([bool*]): whether to remove each of the catagorical variable or not
+        Returns:
+            pandas data frame: new data frame with given variable dummy encoded
+        """
+        variables_cnt = len(variables)
+        if variables_cnt < 1:
+            raise ValueError("Empty variable list.")
+
+        if not remove:
+            remove = [False] * len(variables)
+        for i in range(len(variables)):
+            data = self.dummy_encode_catagorical_variable(data, variables[i], remove[i])
+
+        return data
+
+
+    def epsilon_natural_log(self, feature, epsilon=0.0001):
         """
         take the natural log of given feature plus a tiny number to avoid taking log of 0
         Args:
@@ -106,6 +129,7 @@ class DataScienceAssistant:
             pandas series: the transformed series
         """
         return pd.Series(np.log(feature + epsilon))
+
 
     def normalize(self, feature):
         """
@@ -122,6 +146,7 @@ class DataScienceAssistant:
         feature = (feature - mean) / std
 
         return feature, mean, std
+
 
     def split_data_set(self, init_data, y, train_set_proportion=0.6):
         """
@@ -140,6 +165,7 @@ class DataScienceAssistant:
         validation_set, test_set, validation_set_y, test_set_y = train_test_split(test_set, test_set_y, test_size=0.5)
 
         return train_set, train_set_y, validation_set, validation_set_y, test_set, test_set_y
+
 
     def check_null(self, data, printout=True):
         """
@@ -161,6 +187,7 @@ class DataScienceAssistant:
 
         return features_with_null
 
+
     def proportion_of_level_catagorical_variable(self, feature, printout=True):
         """
         compute the proportion of each value level in a catagorical variable
@@ -175,14 +202,14 @@ class DataScienceAssistant:
         value_to_proportion = dict()
 
         for value in value_list:
-            proportion.append(len(feature[feature == value]))
+            proportion = np.append(proportion, len(feature[feature == value]))
 
-        proportion = proportion / sum(proportion)
+        proportion = proportion / np.sum(proportion)
 
         for i in range(len(value_list)):
             if printout:
-                print('value = %s covers %.2f of data' %
-                      (value_list[i], proportion[i]))
+                print('value = %s covers %.2f%% of data' %
+                      (value_list[i], proportion[i]*100))
             value_to_proportion[value_list[i]] = proportion[i]
 
         return value_to_proportion
