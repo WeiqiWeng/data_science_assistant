@@ -3,13 +3,60 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 
 class DataScienceAssistant:
     def __init__(self):
         pass
 
+    def check_feature_name(self, data):
+        """
+        check if any feature name contains '.' which will cause problem during modeling
+        Args:
+            data (pandas data frame): the data frame the user is working on 
+        Returns:
+            bool: True if there is some problematic feature name
+            [str*]: list of features that contain illegal signs
+        """
+        features = list(data)
+        res = ['.' in x for x in features]
+
+        problematic_features = []
+        for i in range(len(features)):
+            if res[i]:
+                problematic_features.append(features[i])
+
+        return any(res), problematic_features
+
+    def quick_fix_feature_name(self, data):
+        """
+        check if any feature name contains '.' and quickly substitute it with '_'
+        Args:
+            data (pandas data frame): the data frame the user is working on 
+        Returns:
+            pandas data frame: the data frame with illegal feature names fixed
+        """
+        illegal_flag, problematic_features = self.check_feature_name(data)
+        if illegal_flag:
+            renamed_features = ['_'.join(x.split('.'))
+                                for x in problematic_features]
+
+        return self.rename_feature_name(data, problematic_features, renamed_features)
+
+    def rename_feature_name(self, data, old_features, new_features):
+        """
+        rename features according to given old and new feature names
+        Args:
+            data (pandas data frame): the data frame user works on
+            old_features ([str*]): old feature names
+            new_features ([str*]): new feature names user wants to use
+        Returns:
+            pandas data frame: the pandas data frame with features renamed
+        """
+        rename_dict = dict(zip(old_features, new_features))
+        data.rename(columns=rename_dict, inplace=True)
+
+        return data
 
     def discretize_numerical_variable(self, ori_feature, thresholds, discrete_levels):
         """
@@ -36,10 +83,11 @@ class DataScienceAssistant:
             raise ValueError("length of thresholds ({threshold_cnt}) should be length of discrete levels ({level_cnt}) minus one.".format(
                 threshold_cnt=threshold_cnt, level_cnt=level_cnt))
 
-        type_thresholds = map(lambda x: type(x) not in {int, float}, thresholds)
-        type_levels = map(lambda x: type(x) not in {int, float}, discrete_levels)
+        type_thresholds = [type(x) not in {int, float} for x in thresholds]
+        type_levels = [type(x) not in {int, float} for x in discrete_levels]
         if any(type_thresholds) or any(type_levels):
-            raise TypeError("Type of threshold or type of discrete level not numerical.")
+            raise TypeError(
+                "Type of threshold or type of discrete level not numerical.")
 
         feature.loc[feature < thresholds[0]] = discrete_levels[0]
 
@@ -50,7 +98,6 @@ class DataScienceAssistant:
         feature.loc[feature >= thresholds[-1]] = discrete_levels[-1]
 
         return feature
-
 
     def bucket_catagorical_variable(self, ori_feature, newvar_vargroup_map):
         """
@@ -69,7 +116,6 @@ class DataScienceAssistant:
             feature.loc[feature.isin(newvar_vargroup_map[new_var])] = new_var
 
         return feature
-
 
     def dummy_encode_catagorical_variable(self, data, variable, remove=False):
         """
@@ -96,7 +142,6 @@ class DataScienceAssistant:
 
         return data
 
-
     def batch_dummy_encode_catagorical_variable(self, data, variables, remove=[]):
         """
         dummy encode the given list of catagorical variables within data frame in a batch manner
@@ -114,10 +159,10 @@ class DataScienceAssistant:
         if not remove:
             remove = [False] * len(variables)
         for i in range(len(variables)):
-            data = self.dummy_encode_catagorical_variable(data, variables[i], remove[i])
+            data = self.dummy_encode_catagorical_variable(
+                data, variables[i], remove[i])
 
         return data
-
 
     def epsilon_natural_log(self, feature, epsilon=0.0001):
         """
@@ -129,7 +174,6 @@ class DataScienceAssistant:
             pandas series: the transformed series
         """
         return pd.Series(np.log(feature + epsilon))
-
 
     def normalize(self, feature):
         """
@@ -147,7 +191,6 @@ class DataScienceAssistant:
 
         return feature, mean, std
 
-
     def split_data_set(self, init_data, y, train_set_proportion=0.6):
         """
         split given data set into training, validation and testing set
@@ -160,12 +203,14 @@ class DataScienceAssistant:
             pandas data frame: testing set
 
         """
+        from sklearn.model_selection import train_test_split
+
         train_set, test_set, train_set_y, test_set_y = train_test_split(
             init_data, y, test_size=1 - train_set_proportion)
-        validation_set, test_set, validation_set_y, test_set_y = train_test_split(test_set, test_set_y, test_size=0.5)
+        validation_set, test_set, validation_set_y, test_set_y = train_test_split(
+            test_set, test_set_y, test_size=0.5)
 
         return train_set, train_set_y, validation_set, validation_set_y, test_set, test_set_y
-
 
     def check_null(self, data, printout=True):
         """
@@ -186,7 +231,6 @@ class DataScienceAssistant:
                 print('Null in feature %s: %r' % (feature, any_null))
 
         return features_with_null
-
 
     def proportion_of_level_catagorical_variable(self, feature, printout=True):
         """
@@ -209,7 +253,27 @@ class DataScienceAssistant:
         for i in range(len(value_list)):
             if printout:
                 print('value = %s covers %.2f%% of data' %
-                      (value_list[i], proportion[i]*100))
+                      (value_list[i], proportion[i] * 100))
             value_to_proportion[value_list[i]] = proportion[i]
 
         return value_to_proportion
+
+    def balance_with_SMOTETomek(self, data_x, data_y, ratio=0.99, printout=True):
+        """
+        balance the data set with SMOTE and Tomek link
+        Args:
+            data_x (pandas data frame): the data frame with all features
+            data_y (pandas series): labels
+        Returns:
+            pandas data frame: the balanced data frame
+            pandas series: balanced label
+        """
+        from imblearn.combine import SMOTETomek
+
+        sm = SMOTETomek(ratio=ratio)
+        resample_x, resample_y = sm.fit_sample(data_x, data_y)
+
+        if printout:
+            print('%d positive samples out of %d: %.2f%%' % (
+                resample_y.sum(), len(resample_y), 1.0 * resample_y.sum() / len(resample_y)))
+        return resample_x, resample_y
