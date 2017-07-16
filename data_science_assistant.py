@@ -9,7 +9,8 @@ class DataScienceAssistant:
     def __init__(self):
         pass
 
-    def check_feature_name(self, data):
+    @staticmethod
+    def check_feature_name(data):
         """
         check if any feature name contains '.' which will cause problem during modeling
         Args:
@@ -37,13 +38,12 @@ class DataScienceAssistant:
             pandas data frame: the data frame with illegal feature names fixed
         """
         illegal_flag, problematic_features = self.check_feature_name(data)
-        if illegal_flag:
-            renamed_features = ['_'.join(x.split('.'))
-                                for x in problematic_features]
+        res = self.rename_feature_name(data, problematic_features, ['_'.join(
+            x.split('.')) for x in problematic_features]) if illegal_flag else data
+        return res
 
-        return self.rename_feature_name(data, problematic_features, renamed_features)
-
-    def rename_feature_name(self, data, old_features, new_features):
+    @staticmethod
+    def rename_feature_name(data, old_features, new_features):
         """
         rename features according to given old and new feature names
         Args:
@@ -58,7 +58,8 @@ class DataScienceAssistant:
 
         return data
 
-    def discretize_numerical_variable(self, ori_feature, thresholds, discrete_levels):
+    @staticmethod
+    def discretize_numerical_variable(ori_feature, thresholds, discrete_levels):
         """
         discretize the given numerical variable into several levels
         Args:
@@ -99,7 +100,8 @@ class DataScienceAssistant:
 
         return feature
 
-    def bucket_catagorical_variable(self, ori_feature, newvar_vargroup_map):
+    @staticmethod
+    def bucket_catagorical_variable(ori_feature, newvar_vargroup_map):
         """
         divide the value in given catagorical variable into several buckets
         Args:
@@ -117,7 +119,8 @@ class DataScienceAssistant:
 
         return feature
 
-    def dummy_encode_catagorical_variable(self, data, variable, remove=False):
+    @staticmethod
+    def dummy_encode_catagorical_variable(data, variable, remove=False):
         """
         dummy encode the given catagorical variable within data frame
         Args:
@@ -164,7 +167,8 @@ class DataScienceAssistant:
 
         return data
 
-    def epsilon_natural_log(self, feature, epsilon=0.0001):
+    @staticmethod
+    def epsilon_natural_log(feature, epsilon=0.0001):
         """
         take the natural log of given feature plus a tiny number to avoid taking log of 0
         Args:
@@ -175,7 +179,8 @@ class DataScienceAssistant:
         """
         return pd.Series(np.log(feature + epsilon))
 
-    def normalize(self, feature):
+    @staticmethod
+    def normalize(feature):
         """
         normalize with (X - mean) / std
         Args:
@@ -191,7 +196,8 @@ class DataScienceAssistant:
 
         return feature, mean, std
 
-    def split_data_set(self, init_data, y, train_set_proportion=0.6):
+    @staticmethod
+    def split_data_set(init_data, y, train_set_proportion=0.6):
         """
         split given data set into training, validation and testing set
         Args:
@@ -212,7 +218,8 @@ class DataScienceAssistant:
 
         return train_set, train_set_y, validation_set, validation_set_y, test_set, test_set_y
 
-    def check_null(self, data, printout=True):
+    @staticmethod
+    def check_null(data, printout=True):
         """
         check if each feature has NULL value
         Args:
@@ -232,7 +239,8 @@ class DataScienceAssistant:
 
         return features_with_null
 
-    def proportion_of_level_catagorical_variable(self, feature, printout=True):
+    @staticmethod
+    def proportion_of_level_catagorical_variable(feature, printout=True):
         """
         compute the proportion of each value level in a catagorical variable
         Args:
@@ -242,11 +250,12 @@ class DataScienceAssistant:
             dict: a dictionary mapping value level to its proportion
         """
         value_list = feature.unique()
+        value_list.sort()
         proportion = np.array([])
         value_to_proportion = dict()
 
         for value in value_list:
-            proportion = np.append(proportion, len(feature[feature == value]))
+            proportion = np.append(proportion, np.sum(feature == value))
 
         proportion = proportion / np.sum(proportion)
 
@@ -258,7 +267,8 @@ class DataScienceAssistant:
 
         return value_to_proportion
 
-    def balance_with_SMOTETomek(self, data_x, data_y, ratio=0.99, printout=True):
+    @staticmethod
+    def balance_with_SMOTETomek(data_x, data_y, ratio=0.99, printout=True):
         """
         balance the data set with SMOTE and Tomek link
         Args:

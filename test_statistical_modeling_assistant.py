@@ -1,10 +1,16 @@
 import statistical_modeling_assistant as sma
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.preprocessing import normalize
 
 data = pd.read_csv('bank-additional.csv', sep=';')
 
+a = np.ones((1, 3))
+print(np.sum(a == 1))
+
+normalize(a, norm='l1', axis=1, copy=False)
+
+print(a.sum(axis=1))
 print(list(data))
 data = data[['age', 'marital', 'education', 'emp.var.rate', 'euribor3m', 'nr.employed', 'y']].copy()
 
@@ -21,12 +27,9 @@ model = sma_assist.linear_regression(data, ['euribor3m'], 'nr_employed', missing
 
 data = sma_assist.dummy_encode_catagorical_variable(data, 'y')
 model1 = sma_assist.logistic_regression(data, ['euribor3m', 'nr_employed'], 'y_yes', missing_handle='none', intercept=True, printout=True)
-pred_y = model1.predict(data)
 
-pred_y[pred_y > 0.5] = 1
-pred_y[pred_y <= 0.5] = 0
-print(np.linalg.norm(pred_y - data['y'], 2))
+pred_y = sma_assist.logistic_regression_predict(model1, data, label=True, threshold=0.5)
 
-print(pred_y)
+print(sma_assist.get_accuracy(pred_y, data['y_yes']))
 
 print(1)
