@@ -35,7 +35,16 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
         return model
 
     @staticmethod
-    def model_metrics(fitted_model):
+    def get_metric(fitted_model, metric):
+        metric_map = {'aic': stat.regression.linear_model.RegressionResults.aic(fitted_model),
+                      'bic': stat.regression.linear_model.RegressionResults.bic(fitted_model), 
+                      'mse_resid': stat.regression.linear_model.RegressionResults.mse_resid(fitted_model), 
+                      'rsquared': stat.regression.linear_model.RegressionResults.rsquared(fitted_model), 
+                      'rsquared_adj': stat.regression.linear_model.RegressionResults.rsquared_adj(fitted_model)}
+
+        return metric_map[metric]
+
+    def model_metrics(self, fitted_model):
         """
         get metrics of a fitted model as a dictionary
         Args:
@@ -44,16 +53,8 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             dict: metrics 
         """
         metrics = ['aic', 'bic', 'mse_resid', 'rsquared', 'rsquared_adj']
-        metric_values = [stat.regression.linear_model.RegressionResults.aic(fitted_model),
-                         stat.regression.linear_model.RegressionResults.bic(
-                             fitted_model),
-                         stat.regression.linear_model.RegressionResults.mse_resid(
-                             fitted_model),
-                         stat.regression.linear_model.RegressionResults.rsquared(
-                             fitted_model),
-                         stat.regression.linear_model.RegressionResults.rsquared_adj(fitted_model)]
 
-        return dict(zip(metrics, metric_values))
+        return dict(zip(metrics, [self.get_metric(fitted_model, x) for x in metrics]))
 
     def experiment_linear_regression(self, data, y, n=10, metric='rsquared'):
         """
@@ -199,3 +200,13 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
 
         res = np.argmax(pred_y, axis=1) if label else pred_y
         return res
+
+    def cross_validation(self, variables, y, data, k=5):
+        metrics = []
+        size = len(data)
+        fold_size = int(size / k)
+
+        for 
+
+
+
