@@ -9,56 +9,9 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
     def __init__(self):
         super().__init__()
 
-    @staticmethod
-    def linear_regression(data, variables, y, missing_handle='none', intercept=True, printout=False):
+    def experiment(self, model_obj, data, y, n=10, metric='rsquared'):
         """
-        train a linear regression model
-        Args:
-            data (pandas data frame): the data frame with all features
-            variables ([str*]): explanatory variables list as strings
-            y (string): responsive variable as a string
-            missing_handle (string): method to handle missing observations, none/drop/raise
-            intercept (bool): whether to maintain intercept in the model
-            printout (bool): whether to print out summary
-        Returns:
-            statsmodels.formula.api.fit object: fitted model
-        """
-        reg_formula = y + '~' + '+'.join(variables)
-        if not intercept:
-            reg_formula += '-1'
-        model = smf.ols(formula=reg_formula, data=data,
-                        missing=missing_handle).fit()
-
-        if printout:
-            print(model.summary())
-
-        return model
-
-    @staticmethod
-    def get_metric(fitted_model, metric):
-        metric_map = {'aic': stat.regression.linear_model.RegressionResults.aic(fitted_model),
-                      'bic': stat.regression.linear_model.RegressionResults.bic(fitted_model), 
-                      'mse_resid': stat.regression.linear_model.RegressionResults.mse_resid(fitted_model), 
-                      'rsquared': stat.regression.linear_model.RegressionResults.rsquared(fitted_model), 
-                      'rsquared_adj': stat.regression.linear_model.RegressionResults.rsquared_adj(fitted_model)}
-
-        return metric_map[metric]
-
-    def model_metrics(self, fitted_model):
-        """
-        get metrics of a fitted model as a dictionary
-        Args:
-            fitted_model (statsmodels.formula.api.fit object): the fitted model user wants to get metrics
-        Returns:
-            dict: metrics 
-        """
-        metrics = ['aic', 'bic', 'mse_resid', 'rsquared', 'rsquared_adj']
-
-        return dict(zip(metrics, [self.get_metric(fitted_model, x) for x in metrics]))
-
-    def experiment_linear_regression(self, data, y, n=10, metric='rsquared'):
-        """
-        randomly select several explanatory variable groups, run linear regression models and get corresponding metrics
+        randomly select several explanatory variable groups, run regression models and get corresponding metrics
         Args:
             data (pandas data frame): the data frame the user is working on
             y (string): a string represention the responsive variable
@@ -77,7 +30,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
         feature_size_range = range(1, feature_cnt + 1, 1)
         feature_space = []
         metric_space = []
-        if metric in {'rsquared', 'rsquared_adj'}:
+        if metric in {'rsquared', 'rsquared_adj', 'accuracy'}:
             opt_metric = - float('inf')
 
             def compare(x, y): return x > y
@@ -91,71 +44,159 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             feature_sample = np.random.choice(
                 features, feature_space_size, replace=False)
             feature_space.append(feature_sample)
-            model = self.linear_regression(
-                data, feature_sample, y, 'drop', True, False)
-            metrics = self.model_metrics(model)
-            if compare(metrics[metric], opt_metric):
+            model_obj.train(data, feature_sample, y, 'drop', True, False)
+            model_metric = model_obj.get_metric(model_obj, metric)
+            if compare(model_metric, opt_metric):
                 opt_metric = metrics[metric]
                 opt_metric_feature = feature_sample
             metric_space.append(metrics)
 
         return opt_metric_feature, opt_metric, feature_space, metric_space
 
-    @staticmethod
-    def logistic_regression(data, variables, y, missing_handle='none', intercept=True, printout=False):
-        """
-        train a logistic regression model
-        Args:
-            data (pandas data frame): the data frame with all features
-            variables ([str*]): features list of strings
-            y (string): label name as a string
-            missing_handle (string): method to handle missing observations, none/drop/raise
-            intercept (bool): whether to maintain intercept in the model
-            printout (bool): whether to print out summary
-        Returns:
-            statsmodels.formula.api.fit object: fitted model
-        """
-        reg_formula = y + '~' + '+'.join(variables)
-        if not intercept:
-            reg_formula += '-1'
-        model = smf.glm(formula=reg_formula, data=data,
-                        missing=missing_handle, family=sm.families.Binomial()).fit()
+    class LinearRegression():
 
-        if printout:
-            print(model.summary())
+        AVAILABLE_METRICS = ('aic', 'bic', 'mse_resid', 'rsquared', 'rsquared_adj')
 
-        return model
+        def __init__(self, model_obj=None):
+            self.model = model_obj
+    
+        def train(self, data, variables, y, missing_handle='none', intercept=True, printout=False):
+            """
+            train a linear regression model
+            Args:
+                data (pandas data frame): the data frame with all features
+                variables ([str*]): explanatory variables list as strings
+                y (string): responsive variable as a string
+                missing_handle (string): method to handle missing observations, none/drop/raise
+                intercept (bool): whether to maintain intercept in the model
+                printout (bool): whether to print out summary
+            """
+            reg_formula = y + '~' + '+'.join(variables)
+            if not intercept:
+                reg_formula += '-1'
+            model = smf.ols(formula=reg_formula, data=data,
+                            missing=missing_handle).fit()
 
-    @staticmethod
-    def logistic_regression_predict(model, data, label=False, threshold=0.5):
-        """
-        predict label through logistic regression model under given threshold
-        Args:
-            model (statsmodels.formula.api.fit object): fitted logistic model
-            pred_y (numpy array): the predicted logistic value or label under given threshold
-            label (bool): whether to predict label or logistic value
-            threshold (float in (0, 1)): the threshold, 1 if logistic value > threshold, 0 otherwise.
-        Returns:
-            numpy array: the predicted label under given threshold
-        """
-        pred_y = model.predict(data)
-        if label:
-            pred_y[pred_y > threshold] = 1
-            pred_y[pred_y <= threshold] = 0
+            if printout:
+                print(model.summary())
 
-        return pred_y
+            self.model = model
 
-    @staticmethod
-    def get_accuracy(pred_y, y):
-        """
-        compute the accuracy from given predicted labels and true labels
-        Args:
-            pred_y (numpy array): predicted labels
-            y (numpy array): true labels
-        Returns:
-            float: accuracy
-        """
-        return np.sum(pred_y == y) * 1.0 / len(y)
+        def predict(self, data):
+            """
+            use the linear regression model to predict given data
+            Args:
+                data (pandas data frame): the data user wants to predict
+            Returns:
+                numpy array: predicted values
+            """
+            return self.model.predict(data)
+
+
+        @staticmethod
+        def get_metric(trained_obj, metric, data):
+            """
+            get the metric specified
+            Args:
+                trained_obj (a LinearRegression object): a trained LinearRegression object
+                metric (string): name of metric, aic/bic/mse_resid/rsquared/rsquared_adj
+            Returns:
+                float: the metric specified
+            """
+            fitted_model = trained_obj.model
+            if not fitted_model:
+                raise ValueError("The model is not trained yet.")
+            if not metric in trained_obj.AVAILABLE_METRICS:
+                raise ValueError("Given metirc not available.")
+
+            metric_map = {'aic': stat.regression.linear_model.RegressionResults.aic(),
+                          'bic': stat.regression.linear_model.RegressionResults.bic(), 
+                          'mse_resid': stat.regression.linear_model.RegressionResults.mse_resid(), 
+                          'rsquared': stat.regression.linear_model.RegressionResults.rsquared(), 
+                          'rsquared_adj': stat.regression.linear_model.RegressionResults.rsquared_adj()}
+
+            return metric_map[metric](fitted_model)
+
+        @staticmethod
+        def model_metrics(trained_obj):
+            """
+            get metrics of a fitted model as a dictionary
+            Args:
+                trained_obj (a LinearRegression object): a trained LinearRegression object
+            Returns:
+                dict: metrics to value
+            """
+            return dict(zip(metrics, [self.get_metric(trained_obj, x) for x in self.AVAILABLE_METRICS]))
+
+    class LogisticRegression():
+
+        AVAILABLE_METRICS = ('accuracy', 'sensitivity', 'specificity')
+
+        def __init__(self, model_obj=None):
+            self.model = model_obj
+
+        def train(self, data, variables, y, missing_handle='none', intercept=True, printout=False):
+            """
+            train a logistic regression model
+            Args:
+                data (pandas data frame): the data frame with all features
+                variables ([str*]): features list of strings
+                y (string): label name as a string
+                missing_handle (string): method to handle missing observations, none/drop/raise
+                intercept (bool): whether to maintain intercept in the model
+                printout (bool): whether to print out summary
+            """
+            reg_formula = y + '~' + '+'.join(variables)
+            if not intercept:
+                reg_formula += '-1'
+            model = smf.glm(formula=reg_formula, data=data,
+                            missing=missing_handle, family=sm.families.Binomial()).fit()
+
+            if printout:
+                print(model.summary())
+
+            self.model = model
+
+        def predict(self, data):
+            """
+            use the logistic regression to predict
+            Args:
+                data (pandas data frame): the data user wants to predict
+            Returns:
+                numpy array: the predicted sigmoid values
+            """
+            return self.model.predict(data)
+
+        @staticmethod
+        def confusion_matrix(y, pred_y):
+            from sklearn.metrics import confusion_matrix
+            return confusion_matrix(y, pred_y)
+
+        @staticmethod
+        def get_metric(trained_obj, metric):
+            """
+            compute the accuracy from given predicted labels and true labels
+            Args:
+                pred_y (numpy array): predicted labels
+                y (numpy array): true labels
+            Returns:
+                float: accuracy
+            """
+            fitted_model = trained_obj.model
+            if not fitted_model:
+                raise ValueError("The model is not trained yet.")
+            if not metric in trained_obj.AVAILABLE_METRICS:
+                raise ValueError("Given metirc not available.")
+
+            metric_map = {'accuracy': fitted_model.predict(data),
+                          'bic': stat.regression.linear_model.RegressionResults.bic(fitted_model), 
+                          'mse_resid': stat.regression.linear_model.RegressionResults.mse_resid(fitted_model), 
+                          'rsquared': stat.regression.linear_model.RegressionResults.rsquared(fitted_model), 
+                          'rsquared_adj': stat.regression.linear_model.RegressionResults.rsquared_adj(fitted_model)}
+
+            return metric_map[metric]
+
+            return np.sum(pred_y == y) * 1.0 / len(y)
 
     def softmax_regression(self, data, variables, ys, missing_handle='none', intercept=True):
         """
@@ -206,7 +247,13 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
         size = len(data)
         fold_size = int(size / k)
 
-        for 
+        metric_list = []
+
+        for i in range(k):
+            out_fold_start, out_fold_end = i*fold_size, (i+1)*fold_size
+            train_set = pd.concat(data.iloc[0:out_fold_start], data.iloc[out_fold_end:-1]) 
+            validation_set = data.iloc[out_fold_start:out_fold_end]
+            model = 
 
 
 
