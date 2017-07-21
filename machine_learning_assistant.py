@@ -4,6 +4,7 @@ import statsmodels.formula.api as smf
 import statsmodels.api as sm
 import statsmodels as stat
 
+
 class MachineLearningAssistant(dsa.DataScienceAssistant):
     def __init__(self):
-        super().__init__() 
+        super().__init__()
