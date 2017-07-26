@@ -7,7 +7,7 @@ import statsmodels as stat
 
 class StatisticalModelingAssistant(dsa.DataScienceAssistant):
     def __init__(self):
-        super(StatisticalModelingAssistant, self).__init__()
+        super().__init__()
 
     def experiment(self, model_obj, data, y, n=10, metric='rsquared'):
         """
@@ -45,7 +45,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
                 features, feature_space_size, replace=False)
             feature_space.append(feature_sample)
             model_obj.train(data, feature_sample, y, 'drop', True, False)
-            model_metric = model_obj.get_metric(model_obj, metric)
+            model_metric = model_obj.get_metric(metric)
             if compare(model_metric, opt_metric):
                 opt_metric = metrics[metric]
                 opt_metric_feature = feature_sample
@@ -93,8 +93,8 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             """
             return self.model.predict(data)
 
-        @staticmethod
-        def get_metric(trained_obj, metric):
+
+        def get_metric(self, metric):
             """
             get the metric specified
             Args:
@@ -103,10 +103,10 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             Returns:
                 float: the metric specified
             """
-            fitted_model = trained_obj.model
+            fitted_model = self.model
             if not fitted_model:
                 raise ValueError("The model is not trained yet.")
-            if not metric in trained_obj.AVAILABLE_METRICS:
+            if not metric in self.AVAILABLE_METRICS:
                 raise ValueError("Given metirc not available.")
 
             metric_map = {'aic': stat.regression.linear_model.RegressionResults.aic,
@@ -117,7 +117,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
 
             return metric_map[metric](fitted_model)
 
-        def model_metrics(self, trained_obj):
+        def model_metrics(self):
             """
             get metrics of a fitted model as a dictionary
             Args:
@@ -125,9 +125,9 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             Returns:
                 dict: metrics to value
             """
-            return dict(zip(self.AVAILABLE_METRICS, [self.get_metric(trained_obj, x) for x in self.AVAILABLE_METRICS]))
+            return dict(zip(self.AVAILABLE_METRICS, [self.get_metric(x) for x in self.AVAILABLE_METRICS]))
 
-    class LogisticRegression():
+    class LogisticRegression(object):
 
         AVAILABLE_METRICS = ('accuracy', 'sensitivity', 'specificity', 'precision', 'negative_predictive_value',
                              'fall_out', 'false_negative_rate', 'f1_score', 'false_discover_rate')
@@ -201,11 +201,11 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
 
         @staticmethod
         def fall_out(confusion_matrix):
-            return 1 - self.specificity(confusion_matrix)
+            return 1.0 * confusion_matrix[0, 1] / (confusion_matrix[0, 0] + confusion_matrix[0, 1])
 
         @staticmethod
         def false_negative_rate(confusion_matrix):
-            return 1 - self.sensitivity(confusion_matrix)
+            return 1.0 * confusion_matrix[1, 0] / (confusion_matrix[1, 1] + confusion_matrix[1, 0])
 
         @staticmethod
         def f1_score(confusion_matrix):
@@ -213,9 +213,9 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
 
         @staticmethod
         def false_discover_rate(confusion_matrix):
-            return confusion_matrix[0, 0] / (confusion_matrix[0, 0] + confusion_matrix[1, 0])
+            return confusion_matrix[0, 1] / (confusion_matrix[0, 1] + confusion_matrix[1, 1])
 
-        def get_metric(self, data, y, trained_obj, metric):
+        def get_metric(self, data, y, metric):
             """
             compute the accuracy from given predicted labels and true labels
             Args:
@@ -224,14 +224,13 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             Returns:
                 float: accuracy
             """
-            fitted_model = trained_obj.model
-            if not fitted_model:
+            if not self.model:
                 raise ValueError("The model is not trained yet.")
-            if not metric in trained_obj.AVAILABLE_METRICS:
+            if not metric in self.AVAILABLE_METRICS:
                 raise ValueError("Given metirc not available.")
 
             confusion_matrix = self.confusion_matrix(
-                data[y], fitted_model.predict(data))
+                data[y], self.predict(data))
 
             metric_map = {'accuracy': self.accuracy,
                           'sensitivity': self.sensitivity,
@@ -246,8 +245,19 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
 
             return metric_map[metric](confusion_matrix)
 
+        def model_metrics(self, data, y):
+                """
+                get metrics of a fitted model as a dictionary
+                Args:
+                    trained_obj (a LinearRegression object): a trained LinearRegression object
+                Returns:
+                    dict: metrics to value
+                """
+                return dict(zip(self.AVAILABLE_METRICS, [self.get_metric(data, y, x) for x in self.AVAILABLE_METRICS]))
+
     class SoftmaxRegression(LogisticRegression):
         def __init__(self, model_objs=[]):
+            super().__init__()
             self.models = model_objs
 
         def train(self, data, variables, ys, missing_handle='none', intercept=True):
@@ -263,9 +273,9 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             ys.sort()
             models = []
             for y in ys:
-                model = super(SoftmaxRegression, self).train(
+                super().train(
                     data, variables, y, missing_handle, intercept, printout=False)
-                models.append(model)
+                models.append(self.model)
 
             self.models = models
 
@@ -282,7 +292,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             sample_size = len(data)
             pred_y = np.zeros((sample_size, models_cnt))
             for i in range(models_cnt):
-                pred_y[:, i] = models[i].predict(data).reshape(sample_size, 1)
+                pred_y[:, i] = self.models[i].predict(data)
 
             normalize(pred_y, norm='l1', axis=1, copy=False)
 
@@ -296,21 +306,21 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             Returns:
                 statsmodels.formula.api.fit object: fitted model
             """
-            pred_y = 
+            pred_y = self.predict_sigmoid_values(data)
 
             res = np.argmax(pred_y, axis=1) if label else pred_y
             return res
 
-    def cross_validation(self, variables, y, data, k=5):
-        metrics = []
-        size = len(data)
-        fold_size = int(size / k)
+    # def cross_validation(self, variables, y, data, k=5):
+    #     metrics = []
+    #     size = len(data)
+    #     fold_size = int(size / k)
 
-        metric_list = []
+    #     metric_list = []
 
-        for i in range(k):
-            out_fold_start, out_fold_end = i * fold_size, (i + 1) * fold_size
-            train_set = pd.concat(
-                data.iloc[0:out_fold_start], data.iloc[out_fold_end:-1])
-            validation_set = data.iloc[out_fold_start:out_fold_end]
-            model =
+    #     for i in range(k):
+    #         out_fold_start, out_fold_end = i * fold_size, (i + 1) * fold_size
+    #         train_set = pd.concat(
+    #             data.iloc[0:out_fold_start], data.iloc[out_fold_end:-1])
+    #         validation_set = data.iloc[out_fold_start:out_fold_end]
+    #         model =
