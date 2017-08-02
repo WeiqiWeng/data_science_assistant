@@ -47,9 +47,9 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             model_obj.train(data, feature_sample, y, 'drop', True, False)
             model_metric = model_obj.get_metric(model_obj, metric)
             if compare(model_metric, opt_metric):
-                opt_metric = metrics[metric]
+                opt_metric = model_metric
                 opt_metric_feature = feature_sample
-            metric_space.append(metrics)
+            metric_space.append(model_metric)
 
         return opt_metric_feature, opt_metric, feature_space, metric_space
 
@@ -201,7 +201,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
 
         @staticmethod
         def fall_out(confusion_matrix):
-            return 1 - self.specificity(confusion_matrix)
+            return 1.0 * confusion_matrix[0, 1] / (confusion_matrix[0, 0] + confusion_matrix[0, 1])
 
         @staticmethod
         def false_negative_rate(confusion_matrix):
