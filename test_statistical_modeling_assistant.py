@@ -5,12 +5,12 @@ from sklearn.preprocessing import normalize
 
 data = pd.read_csv('bank-additional.csv', sep=';')
 
-a = np.ones((1, 3))
-print(np.sum(a == 1))
+# a = np.ones((1, 3))
+# print(np.sum(a == 1))
 
-normalize(a, norm='l1', axis=1, copy=False)
+# normalize(a, norm='l1', axis=1, copy=False)
 
-print(a.sum(axis=1))
+# print(a.sum(axis=1))
 print(list(data))
 data = data[['age', 'marital', 'education', 'emp.var.rate', 'euribor3m', 'nr.employed', 'y']].copy()
 
@@ -18,18 +18,44 @@ sma_assist = sma.StatisticalModelingAssistant()
 
 data = sma_assist.quick_fix_feature_name(data)
 
+lr = sma_assist.LinearRegression()
+opt_metric_feature, opt_metric, feature_space, metric_space = sma_assist.experiment(lr, data, 'y', n=10, metric='rsquared')
+
+
 # feature_space, metric_space, min_metric_feature, min_metric = sma_assist.experiment_linear_regression(data, 'nr_employed', 10)
 
-# print(feature_space)
-model = sma_assist.linear_regression(data, ['euribor3m'], 'nr_employed', missing_handle='none', intercept=True, printout=True)
-# model_metrics = sma_assist.model_metrics(model)
+print(opt_metric_feature)
+print(opt_metric)
+# lr = sma_assist.LinearRegression()
+
+# lr.train(data, ['euribor3m'], 'nr_employed', missing_handle='none', intercept=True, printout=True)
+# model_metrics = lr.model_metrics()
 # print(model_metrics)
 
-data = sma_assist.dummy_encode_catagorical_variable(data, 'y')
-model1 = sma_assist.logistic_regression(data, ['euribor3m', 'nr_employed'], 'y_yes', missing_handle='none', intercept=True, printout=True)
+# data = sma_assist.dummy_encode_catagorical_variable(data, 'y')
 
-pred_y = sma_assist.logistic_regression_predict(model1, data, label=True, threshold=0.5)
+# log_r = sma_assist.LogisticRegression()
 
-print(sma_assist.get_accuracy(pred_y, data['y_yes']))
+# log_r.train(data, ['euribor3m', 'nr_employed'], 'y_yes', missing_handle='none', intercept=True, printout=True)
 
-print(1)
+# pred_y = log_r.predict(data)
+
+# cm = log_r.confusion_matrix(data.y_yes, pred_y)
+
+# print(cm)
+
+# print(log_r.model_metrics(data, 'y_yes'))
+
+
+# data.loc[30:80, 'y_yes'] = 2
+# data.y_yes = data.y_yes.astype(int)
+# data = sma_assist.dummy_encode_catagorical_variable(data, 'y_yes')
+
+
+# soft_r = sma_assist.SoftmaxRegression()
+
+# soft_r.train(data, ['euribor3m', 'nr_employed'], ['y_yes_0', 'y_yes_2', 'y_yes_1'], missing_handle='none', intercept=True)
+
+# print(soft_r.predict_sigmoid_values(data))
+
+# print(soft_r.predict(data))
