@@ -24,7 +24,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             [dict*]: corresponding metric dictionaries
         """
 
-        features = [x for x in list(data) if x != y]
+        features = [x for x in list(data) if x != y] # TODO need regex operation: y_yes, y_no
 
         feature_cnt = len(features)
         feature_size_range = range(1, feature_cnt + 1, 1)
@@ -45,7 +45,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
                 features, feature_space_size, replace=False)
             feature_space.append(feature_sample)
             model_obj.train(data, feature_sample, y, 'drop', True, False)
-            model_metric = model_obj.get_metric(metric)
+            model_metric = model_obj.get_metric(data, y, metric)
             if compare(model_metric, opt_metric):
                 opt_metric = model_metric
                 opt_metric_feature = feature_sample
@@ -94,7 +94,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             return self.model.predict(data)
 
 
-        def get_metric(self, metric):
+        def get_metric(self, data, y, metric):
             """
             get the metric specified
             Args:
@@ -185,34 +185,50 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
 
         @staticmethod
         def sensitivity(confusion_matrix):
+            if confusion_matrix.shape[0] > 2:
+                raise ValueError("Only 2D confusion matrix available.")
             return 1.0 * confusion_matrix[1, 1] / (confusion_matrix[1, 1] + confusion_matrix[1, 0])
 
         @staticmethod
         def specificity(confusion_matrix):
+            if confusion_matrix.shape[0] > 2:
+                raise ValueError("Only 2D confusion matrix available.")
             return 1.0 * confusion_matrix[0, 0] / (confusion_matrix[0, 0] + confusion_matrix[0, 1])
 
         @staticmethod
         def precision(confusion_matrix):
+            if confusion_matrix.shape[0] > 2:
+                raise ValueError("Only 2D confusion matrix available.")
             return 1.0 * confusion_matrix[1, 1] / (confusion_matrix[1, 1] + confusion_matrix[0, 1])
 
         @staticmethod
         def negative_predictive_value(confusion_matrix):
+            if confusion_matrix.shape[0] > 2:
+                raise ValueError("Only 2D confusion matrix available.")
             return 1.0 * confusion_matrix[0, 0] / (confusion_matrix[0, 0] + confusion_matrix[1, 0])
 
         @staticmethod
         def fall_out(confusion_matrix):
+            if confusion_matrix.shape[0] > 2:
+                raise ValueError("Only 2D confusion matrix available.")
             return 1.0 * confusion_matrix[0, 1] / (confusion_matrix[0, 0] + confusion_matrix[0, 1])
 
         @staticmethod
         def false_negative_rate(confusion_matrix):
+            if confusion_matrix.shape[0] > 2:
+                raise ValueError("Only 2D confusion matrix available.")
             return 1.0 * confusion_matrix[1, 0] / (confusion_matrix[1, 1] + confusion_matrix[1, 0])
 
         @staticmethod
         def f1_score(confusion_matrix):
+            if confusion_matrix.shape[0] > 2:
+                raise ValueError("Only 2D confusion matrix available.")
             return 2.0 * confusion_matrix[1, 1] / (2.0 * confusion_matrix[1, 1] + confusion_matrix[0, 1] + confusion_matrix[1, 0])
 
         @staticmethod
         def false_discover_rate(confusion_matrix):
+            if confusion_matrix.shape[0] > 2:
+                raise ValueError("Only 2D confusion matrix available.")
             return confusion_matrix[0, 1] / (confusion_matrix[0, 1] + confusion_matrix[1, 1])
 
         def get_metric(self, data, y, metric):
@@ -308,7 +324,7 @@ class StatisticalModelingAssistant(dsa.DataScienceAssistant):
             """
             pred_y = self.predict_sigmoid_values(data)
 
-            res = np.argmax(pred_y, axis=1) if label else pred_y
+            res = np.argmax(pred_y, axis=1)
             return res
 
     # def cross_validation(self, variables, y, data, k=5):
